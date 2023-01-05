@@ -1,6 +1,6 @@
 # Python script to add hydrogens to transform NH into NH2
 # written by Francesco Mambretti, 15/12/2022
-# 04/01/2022 version
+# 05/01/2022 version
 
 import sys
 import os
@@ -151,7 +151,8 @@ def delete_lithium_atom(lithii,N_Lithium,id,type,x,y,z,x_new,y_new,z_new):
     #find closest lithium to the added H
     min_dist=np.min(dist_Li_newH)
     inner_index=int(np.where(dist_Li_newH==min_dist)[0]) #internal index among the group of Li atoms
-    index_to_del=int(np.where(id==lithii[inner_index])[0])
+    selected_index=lithii[inner_index]
+    index_to_del=int(np.where(id==selected_index)[0])
     
     print("Deleting Li atom number {}, found at position {}".format(int(id[index_to_del]),int(index_to_del+lammps_offset)))
     
@@ -161,8 +162,9 @@ def delete_lithium_atom(lithii,N_Lithium,id,type,x,y,z,x_new,y_new,z_new):
     x=np.delete(x,index_to_del)
     y=np.delete(y,index_to_del)
     z=np.delete(z,index_to_del)
+    lithii=np.delete(lithii,inner_index)
     
-    return lithii[inner_index],id,type,x,y,z
+    return selected_index,id,type,x,y,z,lithii
 
 
 ##################################################################################################################################
@@ -207,7 +209,7 @@ for i in range (0,N):
     #print(index,int(type[id==index]),neigh_index,int(type[id==neigh_index]))
     x_new,y_new,z_new=gen_new_coords(index,neigh_index,min_dist)
     #print(id[index],type[int(id[index])],neigh_index,type[int(neigh_index)])
-    index_to_add,id,type,x,y,z=delete_lithium_atom(lithii,N_Lithium,id,type,x,y,z,x_new,y_new,z_new)
+    index_to_add,id,type,x,y,z,lithii=delete_lithium_atom(lithii,N_Lithium,id,type,x,y,z,x_new,y_new,z_new)
 
     #update
     N_Lithium-=1
@@ -217,6 +219,8 @@ for i in range (0,N):
     z=np.append(z,z_new)
     id=np.append(id,index_to_add) #the new H atom takes the id of the deleted Li
     type=np.append(type,Hydro_t)
+    
+    print (len(lithii))
 
 #print new file
 #read first 9 lines
