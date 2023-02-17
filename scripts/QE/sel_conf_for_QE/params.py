@@ -5,12 +5,12 @@
 sigma_list=[0.15,0.2,0.3,0.5]
 
 # files and folders
-main_folder="../256_atoms/8_NH2_750K/"
-nruns=3
+main_folder="../../256_atoms/0_NH2_750K/"
+nruns=1
 file_devi_name="model_devi.out"
 template_QE="template_Li2NH_NH2.in"
 num_lin_from_template_QE=39
-dir_QE_files="QE_in/"
+dir_QE_files="QE/"
 QE_rootname="scf"
 
 #other params

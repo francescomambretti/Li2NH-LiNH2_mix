@@ -1,8 +1,10 @@
+# original script by dpdata
+# modified by Francesco Mambretti, 24/01/2023
 #!/bin/bash
 
-nline_per_set=2000
+nline_per_set=2000  #default
 
-if test $# -ge 1; then
+if test $# -ge 1; then   #pass number of lines per set by command line
     nline_per_set=$1
 fi
 
@@ -10,15 +12,15 @@ rm -fr set.*
 echo nframe is `cat box.raw | wc -l`
 echo nline per set is $nline_per_set
 
-split box.raw	 -l $nline_per_set -d -a 3 box.raw
-split coord.raw	 -l $nline_per_set -d -a 3 coord.raw
+test -f box.raw && split box.raw -l $nline_per_set -d -a 3 box.raw   #split box.raw (whose length is $nline_per_set) into smaller files with 3 lines each (- a 3), using numeric ordering to label them (-d)
+test -f coord.raw && split coord.raw -l $nline_per_set -d -a 3 coord.raw
 test -f energy.raw && split energy.raw -l $nline_per_set -d -a 3 energy.raw
 test -f force.raw  && split force.raw  -l $nline_per_set -d -a 3 force.raw
 test -f virial.raw && split virial.raw -l $nline_per_set -d -a 3 virial.raw
-test -f atom_ener.raw && split atom_ener.raw -l $nline_per_set -d -a 3 atom_ener.raw
-test -f fparam.raw && split fparam.raw -l $nline_per_set -d -a 3 fparam.raw
+#test -f atom_ener.raw && split atom_ener.raw -l $nline_per_set -d -a 3 atom_ener.raw #??
+#test -f fparam.raw && split fparam.raw -l $nline_per_set -d -a 3 fparam.raw #??
 
-nset=`ls | grep box.raw[0-9] | wc -l`
+nset=`ls | grep box.raw[0-9] | wc -l` #count the number of box.raw0, box.raw1 etc.
 nset_1=$(($nset-1))
 echo will make $nset sets
 

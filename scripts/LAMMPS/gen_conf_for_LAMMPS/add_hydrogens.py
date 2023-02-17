@@ -1,5 +1,6 @@
 # Python script to add hydrogens to transform NH into NH2
 # written by Francesco Mambretti, 15/12/2022
+# to be added: check possible overlaps in newly added H --> MISSING
 # 05/01/2022 version
 
 import sys
