@@ -1,10 +1,9 @@
 # Python script to add hydrogens to transform some NH into NH2
 # written by Francesco Mambretti, 15/12/2022
-# to be added: check possible overlaps in newly added H --> MISSING
 # this code version expects either a LAMMPS dump file or a xyz file (specified by command line)
 # the new generated file has the same format of the input one
 # This version also deals with surfaces (triclinic cells)
-# 27/02/2023 version - work in progress
+# 02/03/2023 version - work in progress
 
 import sys
 import os
@@ -13,7 +12,7 @@ from numpy.random import rand,seed
 from numpy.linalg import norm
 
 if (len(sys.argv)!=7):
-    print("Error! 5 arguments needed: input file, input/output format ('dump'/'xyz'), output file, random seed, N to substitute and triclinic surface(0/1 <--> True/False)")
+    print("Error! 6 arguments needed: input file, input/output format ('dump'/'xyz'), output file, random seed, N to substitute and triclinic surface(0/1 <--> True/False)")
 
 input_file=sys.argv[1]
 format=sys.argv[2]
@@ -102,7 +101,7 @@ def gen_new_coords(index,neigh_index,min_dist):
     a1=(a1x,a1y,a1z)
     min_dist=np.sqrt(np.dot(a1,a1)) #compute its norm
     a1p=(min_dist,0,0)
-    print(a1)
+    #print(a1)
     
     #move all into a new reference frame, where the H already present lies at a distance min_dist along x axis
     transform_matrix=rotation_matrix_from_vectors(a1, a1p)
@@ -176,7 +175,7 @@ def delete_lithium_atom(lithii,N_Lithium,id,type,x,y,z,x_new,y_new,z_new,surf):
     selected_index=lithii[inner_index]
     index_to_del=int(np.where(id==selected_index)[0])
     
-    print("Deleting Li atom number {}, found at position {}".format(int(id[index_to_del]),int(index_to_del+lammps_offset)))
+    #print("Deleting Li atom number {}, found at position {}".format(int(id[index_to_del]),int(index_to_del+lammps_offset)))
     
     #delete
     id=np.delete(id,index_to_del)
@@ -202,20 +201,20 @@ def find_box_tr(lx, ly, lz, xy, xz, yz):   #identify triclinic box - may be remo
     return box_tr
     
 ####################################
-def make_ortho_box(boxx_lo, boxx_hi, boxy_lo, boxy_hi, boxz_lo, boxz_hi, xy, xz, yz):  #find orthogonal bounding box
+def make_tri_box(boxx_lo_b, boxx_hi_b, boxy_lo_b, boxy_hi_b, boxz_lo_b, boxz_hi_b, xy, xz, yz):  #find triclinic box from orthogonal bounding box
     
     #see LAMMPS doc
-    xlo_bound = boxx_lo + min(0.0,xy,xz,xy+xz)
-    xhi_bound = boxx_hi + max(0.0,xy,xz,xy+xz)
-    ylo_bound = boxy_lo + min(0.0,yz)
-    yhi_bound = boxy_hi + max(0.0,yz)
-    zlo_bound = boxz_lo
-    zhi_bound = boxz_hi
+    boxx_lo = boxx_lo_b - min(0.0,xy,xz,xy+xz)
+    boxx_hi = boxx_hi_b - max(0.0,xy,xz,xy+xz)
+    boxy_lo = boxy_lo_b - min(0.0,yz)
+    boxy_hi = boxy_hi_b - max(0.0,yz)
+    boxz_lo = boxz_lo_b
+    boxz_hi = boxz_hi_b
     
-    box=[xhi_bound-xlo_bound,yhi_bound-ylo_bound,zhi_bound-zlo_bound,0,0,0]
-    #print(box)
+    box=[boxx_hi-boxx_lo,boxy_hi-boxy_lo,boxz_hi-boxz_lo] #these are just lengths
+    box_list_info=[boxx_hi,boxx_lo,boxy_hi,boxy_lo,boxz_hi,boxz_lo,xy,xz,yz]
 
-    return box
+    return box, box_list_info
 
 ##################################################################################################################################
 
@@ -241,10 +240,10 @@ if (surf==1): #bulk
 
 else:
     if format=='dump':
-        boxx_lo, boxx_hi, xy = np.loadtxt (input_file,skiprows=5,max_rows=1,unpack=True,usecols=(0,1,2))
-        boxy_lo, boxy_hi, xz = np.loadtxt (input_file,skiprows=6,max_rows=1,unpack=True,usecols=(0,1,2))
-        boxz_lo, boxz_hi, yz = np.loadtxt (input_file,skiprows=7,max_rows=1,unpack=True,usecols=(0,1,2))
-        box=make_ortho_box(boxx_lo, boxx_hi, boxy_lo, boxy_hi, boxz_lo, boxz_hi, xy, xz, yz)
+        boxx_lo_b, boxx_hi_b, xy = np.loadtxt (input_file,skiprows=5,max_rows=1,unpack=True,usecols=(0,1,2))
+        boxy_lo_b, boxy_hi_b, xz = np.loadtxt (input_file,skiprows=6,max_rows=1,unpack=True,usecols=(0,1,2))
+        boxz_lo_b, boxz_hi_b, yz = np.loadtxt (input_file,skiprows=7,max_rows=1,unpack=True,usecols=(0,1,2))
+        box,box_list_info=make_tri_box(boxx_lo_b, boxx_hi_b, boxy_lo_b, boxy_hi_b, boxz_lo_b, boxz_hi_b, xy, xz, yz)
 
     else:
         pass #complete for xyz
@@ -264,14 +263,24 @@ N_Lithium=len(lithii)
 mat_dist=compute_mat_dist(nitrogens,hydrogens,N_Nitro,N_Hydro,x,y,z,surf)
 #add hydrogens in random positions
 
+#avoid adding two H on the same N
+alr_pick=np.empty(0)
+
 for i in range (0,N):
 
-    j=int(rand()*N_Nitro) #choose random nitrogen atom
+    if i>0:
+        while(j in alr_pick):
+            j=int(rand()*N_Nitro) #choose random nitrogen atom
+    else:
+        j=int(rand()*N_Nitro)
+    alr_pick=np.append(alr_pick,j)
+    print(j)
     index=int(nitrogens[j]) #true atom ID
+    
     #print(index,int(type[id==index]))
     #generate new coordinates for the new H, bonded to the chosen Nitrogen atom, whose index is id[nitrogens[j]]
     min_dist=np.min(mat_dist[j]) #choose the H with the minimum distance, in the j-th row
-    print(min_dist)
+    #print(min_dist)
     k=int(np.where(mat_dist[j]==min_dist)[0]) #select the closest hydrogen to the chosen nitrogen, k-th column of j-th row
     neigh_index=int(hydrogens[k])
     #print(index,int(type[id==index]),neigh_index,int(type[id==neigh_index]))
@@ -288,22 +297,22 @@ for i in range (0,N):
     id=np.append(id,index_to_add) #the new H atom takes the id of the deleted Li
     type=np.append(type,Hydro_t)
     
-    print (len(lithii))
+    #print (len(lithii))
 
 #write new file in the same format
 #read first 9 lines
 
-if format=='dump': # DA CAMBIARE LE PRIME RIGHE!!!!!!!!
-        
+if format=='dump':
+
     with open(output_file, 'w') as f:
         f.write("LAMMPS data file \n")
         f.write(str(int(Ntotal))+" atoms \n")
         f.write(str(int(np.max(type)))+" atom types \n")
-        f.write(str(boxx_lo)+" "+str(boxx_hi)+" xlo xhi \n")
-        f.write(str(boxy_lo)+" "+str(boxy_hi)+" ylo yhi \n")
-        f.write(str(boxz_lo)+" "+str(boxz_hi)+" zlo zhi \n")
+        f.write(str(box_list_info[1])+" "+str(box_list_info[0])+" xlo xhi \n")
+        f.write(str(box_list_info[3])+" "+str(box_list_info[2])+" ylo yhi \n")
+        f.write(str(box_list_info[5])+" "+str(box_list_info[4])+" zlo zhi \n")
         f.write(str(xy)+" "+str(xz)+" "+str(yz)+" xy xz yz \n")
-        f.write("\n Atoms \n \n")
+        f.write("Atoms \n \n")
         for a,b,c,d,e in zip(id,type,x,y,z):
             f.write(str(int(a))+" "+str(int(b))+" "+str(c)+" "+str(d)+" "+str(e)+"\n")
 
