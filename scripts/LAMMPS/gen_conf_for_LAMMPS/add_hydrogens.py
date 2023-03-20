@@ -2,8 +2,8 @@
 # written by Francesco Mambretti, 15/12/2022
 # this code version expects either a LAMMPS dump file or a xyz file (specified by command line)
 # the new generated file has the same format of the input one
-# This version also deals with surfaces (triclinic cells)
-# 02/03/2023 version - work in progress
+# This version also deals with surfaces (triclinic cells) --> NH2 are not created in the 2 bottom layers
+# 16/03/2023 version - work in progress
 
 import sys
 import os
@@ -11,8 +11,8 @@ import numpy as np
 from numpy.random import rand,seed
 from numpy.linalg import norm
 
-if (len(sys.argv)!=7):
-    print("Error! 6 arguments needed: input file, input/output format ('dump'/'xyz'), output file, random seed, N to substitute and triclinic surface(0/1 <--> True/False)")
+if (len(sys.argv)!=8):
+    print("Error! 6 arguments needed: input file, input/output format ('dump'/'xyz'), output folder, output file, random seed, N to substitute and triclinic surface(0/1 <--> True/False)")
 
 input_file=sys.argv[1]
 format=sys.argv[2]
@@ -20,14 +20,15 @@ if (format!='dump' and format!='xyz'):
     print("wrong input file format! set dump or xyz")
     sys.exit(-1)
     
-output_file=sys.argv[3]
+output_folder=sys.argv[3]
+output_file=sys.argv[4]
 
 #set params
-myseed=sys.argv[4] #set seed
+myseed=sys.argv[5] #set seed
 seed(int(myseed))
 
 angle=2./3.*np.pi #radians, planar molecule angle
-N=int(sys.argv[5]) #hydrogens to add --> MUST be even! 1 NH has 2 "-" charges, while 1 NH_2 has only one "-" charge
+N=int(sys.argv[6]) #hydrogens to add --> MUST be even! 1 NH has 2 "-" charges, while 1 NH_2 has only one "-" charge
 Hydro_t=1
 Nitro_t=2
 Lithium_t=3
@@ -41,7 +42,7 @@ z=np.zeros(0)
 id=np.zeros(0)
 type=np.zeros(0)
 
-surf=int(sys.argv[6]) #whether the box is triclinic or not
+surf=int(sys.argv[7]) #whether the box is triclinic or not
 
 ##################################################################################################################################
 #methods definition
@@ -85,7 +86,9 @@ def read_input(input_file, format): #LAMMPS format
     nitrogens=id[type==Nitro_t] #same for nitrogens
     lithii=id[type==Lithium_t] #lithii
     
-    return hydrogens,nitrogens,lithii,id,type,x,y,z
+    z_orig=z[type==Nitro_t]
+    
+    return hydrogens,nitrogens,lithii,id,type,x,y,z,z_orig
 
 ####################################
 def gen_new_coords(index,neigh_index,min_dist):
@@ -219,16 +222,19 @@ def make_tri_box(boxx_lo_b, boxx_hi_b, boxy_lo_b, boxy_hi_b, boxz_lo_b, boxz_hi_
 ##################################################################################################################################
 
 if format=='dump':
-    Ntotal=np.loadtxt(input_file,skiprows=3,max_rows=1,unpack=True,usecols=(0,)) #read total number of atoms
+    if (surf==0):
+        Ntotal=np.loadtxt(input_file,skiprows=3,max_rows=1,unpack=True,usecols=(0,)) #read total number of atoms
+    else:
+        Ntotal=np.loadtxt(input_file,skiprows=1,max_rows=1,unpack=True,usecols=(0,)) #read total number of atoms
 else: #xyz
     Ntotal=np.loadtxt(input_file,skiprows=0,max_rows=1,unpack=True,usecols=(0,))
 
 #set box size
 if (surf==1): #bulk
     if format=='dump':
-        boxx_lo, boxx_hi = np.loadtxt (input_file,skiprows=5,max_rows=1,unpack=True,usecols=(0,1))
-        boxy_lo, boxy_hi = np.loadtxt (input_file,skiprows=6,max_rows=1,unpack=True,usecols=(0,1))
-        boxz_lo, boxz_hi = np.loadtxt (input_file,skiprows=7,max_rows=1,unpack=True,usecols=(0,1))
+        boxx_lo, boxx_hi = np.loadtxt (input_file,skiprows=3,max_rows=1,unpack=True,usecols=(0,1))
+        boxy_lo, boxy_hi = np.loadtxt (input_file,skiprows=4,max_rows=1,unpack=True,usecols=(0,1))
+        boxz_lo, boxz_hi = np.loadtxt (input_file,skiprows=5,max_rows=1,unpack=True,usecols=(0,1))
 
         box=np.zeros(3)
         box[0]=boxx_hi-boxx_lo
@@ -249,7 +255,7 @@ else:
         pass #complete for xyz
         
 #read input
-hydrogens,nitrogens,lithii,id,type,x,y,z=read_input(input_file,format)
+hydrogens,nitrogens,lithii,id,type,x,y,z,z_orig=read_input(input_file,format)
 
 hydrogens=np.asarray(hydrogens,dtype=int)
 nitrogens=np.asarray(nitrogens,dtype=int)
@@ -269,12 +275,13 @@ alr_pick=np.empty(0)
 for i in range (0,N):
 
     if i>0:
-        while(j in alr_pick):
+        while((j in alr_pick) or z_orig[j]<5.2):
             j=int(rand()*N_Nitro) #choose random nitrogen atom
     else:
         j=int(rand()*N_Nitro)
+    
     alr_pick=np.append(alr_pick,j)
-    print(j)
+    #print(j)
     index=int(nitrogens[j]) #true atom ID
     
     #print(index,int(type[id==index]))
@@ -298,20 +305,27 @@ for i in range (0,N):
     type=np.append(type,Hydro_t)
     
     #print (len(lithii))
+    
+np.savetxt(output_folder+"/list_N_in_NH2_{}.txt".format(N),alr_pick,fmt="%d")
 
 #write new file in the same format
 #read first 9 lines
 
 if format=='dump':
 
-    with open(output_file, 'w') as f:
+    with open(output_folder+"/"+output_file, 'w') as f:
         f.write("LAMMPS data file \n")
         f.write(str(int(Ntotal))+" atoms \n")
         f.write(str(int(np.max(type)))+" atom types \n")
-        f.write(str(box_list_info[1])+" "+str(box_list_info[0])+" xlo xhi \n")
-        f.write(str(box_list_info[3])+" "+str(box_list_info[2])+" ylo yhi \n")
-        f.write(str(box_list_info[5])+" "+str(box_list_info[4])+" zlo zhi \n")
-        f.write(str(xy)+" "+str(xz)+" "+str(yz)+" xy xz yz \n")
+        if (surf==0):
+            f.write(str(box_list_info[1])+" "+str(box_list_info[0])+" xlo xhi \n")
+            f.write(str(box_list_info[3])+" "+str(box_list_info[2])+" ylo yhi \n")
+            f.write(str(box_list_info[5])+" "+str(box_list_info[4])+" zlo zhi \n")
+            f.write(str(xy)+" "+str(xz)+" "+str(yz)+" xy xz yz \n")
+        else:
+            f.write(str(boxx_lo)+" "+str(boxx_hi)+" xlo xhi \n")
+            f.write(str(boxy_lo)+" "+str(boxy_hi)+" ylo yhi \n")
+            f.write(str(boxz_lo)+" "+str(boxz_hi)+" zlo zhi \n")
         f.write("Atoms \n \n")
         for a,b,c,d,e in zip(id,type,x,y,z):
             f.write(str(int(a))+" "+str(int(b))+" "+str(c)+" "+str(d)+" "+str(e)+"\n")
@@ -323,7 +337,7 @@ else: #xyz
     with open(input_file, 'r') as fp:
         lines01 = fp.readlines()[0:2]
 
-    with open(output_file, 'w') as f:
+    with open(output_folder+"/"+output_file, 'w') as f:
         for line in lines01:
             f.write(line)
         for b,c,d,e in zip(type,x,y,z):
