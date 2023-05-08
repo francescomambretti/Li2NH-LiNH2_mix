@@ -1,0 +1,38 @@
+&CONTROL
+    calculation='scf', disk_io='low', prefix='pwscf',nstep=300
+    pseudo_dir='/users/fmambret/apps/PSEUDOPOTENTIALS/'
+    outdir='./tmp_$INDEX',tprnfor=.true., tstress=.true.
+/
+!scf --> single point calculation
+
+&SYSTEM
+    a     =  14.2308
+    c     =  30
+    degauss     =  1.00000e-02
+    ecutrho     =  4.00000e+02
+    ecutwfc     =  8.00000e+01		!energy cutoff in Rydberg for waves
+    ibrav       = 4
+    nat         = 384	!number of atoms
+    ntyp        = 3
+    occupations = "smearing"
+    smearing    = "gaussian"
+    tot_charge = 0
+/
+
+&ELECTRONS
+    diagonalization = 'david'
+    conv_thr         =  1.00000e-07
+    electron_maxstep = 200
+    mixing_beta      =  3.00000e-01
+    startingpot      = "atomic"
+    startingwfc      = "atomic+random"
+/
+
+K_POINTS {gamma}
+
+ATOMIC_SPECIES
+H    1.00794   H.pbe-rrkjus_psl.1.0.0.UPF
+N   14.00674   N.pbe-n-rrkjus_psl.1.0.0.UPF
+Li   6.94100   Li.pbe-sl-rrkjus_psl.1.0.0.UPF
+
+ATOMIC_POSITIONS {angstrom}

@@ -40,7 +40,7 @@ else: #use default values
     print("Warning! Using default values for sigma...are you sure?")
     print(boundaries)
 
-for r in range (0,nruns):
+for r in range (start,end+1):
     selected=[] #list of selected configs
     counter_sel=np.zeros(4,dtype=int)
 

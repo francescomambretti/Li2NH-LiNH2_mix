@@ -1,4 +1,0 @@
-sel_conf_devi1.py selects configurations based on the max_f value in model_devi.out, using a single dump.xyz file
-sel_conf_devi_many.py does the same but any frame has its dump.*.xyz
-
-N.B.: thresholds.dat is merely an example
