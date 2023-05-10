@@ -28,7 +28,6 @@ def assign_to_subgroup(sigma,boundaries): #assign each configuration to a group,
 
 #set the 4 intervals
 boundaries=sigma_list
-fractions=[1,0.7,0.3,0.05] #take this fraction of configurations from each subgroup -> can be changed
 
 ##########################
 # loop over replicas
@@ -47,7 +46,7 @@ for r in range (start,end+1):
     folder_sim=main_folder+"/run_{}/".format(int(r))
 
     file_devi=folder_sim+file_devi_name
-    steps,devi=np.loadtxt(file_devi,unpack=True,usecols=(0,4,),skiprows=2+int(dump_start/dump_freq)) #skip equilibration
+    steps,devi=np.loadtxt(file_devi,unpack=True,usecols=(0,4,),skiprows=1+int(dump_start/dump_freq)) #skip equilibration
     #last_ave_devi=np.loadtxt(file_devi,unpack=True,usecols=6,skiprows=len(devi)+int(dump_start/dump_freq))
 
     steps_to_delete=np.zeros(0,dtype=int)
@@ -59,7 +58,7 @@ for r in range (start,end+1):
         subgroup=int(assign_to_subgroup(s,boundaries))
         if subgroup>=0:
             #add configuration to selected configurations with a given probability
-            if (random.uniform(0, 5)<fractions[subgroup]):
+            if (random.uniform(0, 1)<fractions[subgroup]):
                 selected.append(i)
                 counter_sel[subgroup]+=1
         else:
@@ -88,6 +87,6 @@ for r in range (start,end+1):
 
         # second: copy and paste from single LAMMPS configurations
         begin=int((natoms+2)*i)+3 #skip first 2 lines of each frame
-        end=int((natoms+2)*(i+1))+1
+        end=int((natoms+2)*(i+1))
         os.system("sed -n "+str(begin)+","+str(end)+"p "+folder_sim+"/dump/dump.xyz >>"+folder_sim+dir_QE_files+outname)
 #        os.system("tail -n +3  "+folder_sim+"/dump/dump."+str(dump_step)+".xyz >> "+folder_sim+dir_QE_files+outname)

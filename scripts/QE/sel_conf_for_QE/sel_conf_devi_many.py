@@ -28,7 +28,6 @@ def assign_to_subgroup(sigma,boundaries): #assign each configuration to a group,
 
 #set the 4 intervals
 boundaries=sigma_list
-fractions=[1,0.9,0.35,0.05] #take this fraction of configurations from each subgroup -> can be changed
 
 ##########################
 # loop over replicas
