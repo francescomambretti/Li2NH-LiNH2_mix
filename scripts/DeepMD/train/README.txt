@@ -13,3 +13,5 @@ n_steps=200*decay_step
 `sub-multi_gpu.sh` is the most used (ok for train, train with restart, freeze and compress)
 
 N.B.: to determine `sel`, follow the [instructions here] (https://docs.deepmodeling.com/projects/deepmd/en/master/model/sel.html)
+
+`plot_lcurve.py`: plots the desired info (on a png file) from `lcurve.out`
