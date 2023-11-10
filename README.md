@@ -1,4 +1,4 @@
-# LithiumImiAmi
+# Li2NH-LiNH2_mix
 scripts for the investigation of Ammonia decomposition on Lithium Imide/Amide solid solutions. 
 [preprint] (https://chemrxiv.org/engage/chemrxiv/article-details/654b646b2c3c11ed71f64104)
 
