@@ -28,7 +28,6 @@ def assign_to_subgroup(sigma,boundaries): #assign each configuration to a group,
 
 #set the 4 intervals
 boundaries=sigma_list
-fractions=[1,0.5,0.25,0.05] #take this fraction of configurations from each subgroup -> can be changed
 
 ##########################
 # loop over replicas
@@ -49,8 +48,8 @@ for r in range (start,end+1):
     folder_sim=main_folder+"/run_{}/".format(int(r))
 
     #load history of CV values
-    file=folder_sim+colvar_filename
-    steps,CV=np.loadtxt(file,unpack=True,usecols=(0,1,),skiprows=1)
+    fileCV=folder_sim+colvar_filename
+    steps,CV=np.loadtxt(fileCV,unpack=True,usecols=(0,1,),skiprows=1)
     
     #load history of model deviations
     file_devi=folder_sim+file_devi_name
@@ -70,7 +69,7 @@ for r in range (start,end+1):
         subgroup=int(assign_to_subgroup(s,boundaries))
         #print(i,s,subgroup,CV[i],fractions[subgroup])
         if (subgroup>=0 and CV[i]>= col_min and CV[i]<=col_max):  #add configuration to selected configurations with a given probability
-            if (random.uniform(0, 5)<fractions[subgroup]):
+            if (random.uniform(0, 1)<fractions[subgroup]):
                 selected.append(i)
                 counter_sel[subgroup]+=1
         else:

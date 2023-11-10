@@ -2,7 +2,7 @@
 # select configurations based upon the COLVAR value
 # then, prepare input folders for Quantum Espresso
 # works looping on replicas, at fixed T and chemical composition of the system
-# 28/04/2023 version
+# 10/11/2023 version
 
 import numpy as np
 from params import *
@@ -42,14 +42,13 @@ else:
     file_devi=sys.argv[4]
     
 for r in range (start,end+1):
-    selected=[] #list of selected configs
     counter_sel=np.zeros(4,dtype=int)
 
     folder_sim=main_folder+"/run_{}/".format(int(r))
 
     #load history of CV values
-    file=folder_sim+colvar_filename
-    steps,CV=np.loadtxt(file,unpack=True,usecols=(0,1,),skiprows=1)
+    fileCV=folder_sim+colvar_filename
+    steps,CV=np.loadtxt(fileCV,unpack=True,usecols=(0,1,),skiprows=1)
     
     #load history of model deviations
     file_devi=folder_sim+file_devi_name
@@ -70,7 +69,6 @@ for r in range (start,end+1):
         print(i,s,subgroup,CV[i])
         if (subgroup>=0 and CV[i]>= col_min and CV[i]<=col_max):  #add configuration to selected configurations with a given probability
             if (random.uniform(0, 1)<fractions[subgroup]):
-                selected.append(i)
                 counter_sel[subgroup]+=1
         else:
             #remove that step
@@ -86,9 +84,7 @@ for r in range (start,end+1):
     if not os.path.exists(folder_sim+dir_QE_files):
         os.makedirs(folder_sim+dir_QE_files)
         
-    for i,config in enumerate(selected): #config is unused, so far
-
-        dump_step=int(steps[int(i)])
+    for dump_step in steps:
 
         # first part: copy and paste from template
         outname=QE_rootname+"."+str(i)+".in"
@@ -98,4 +94,3 @@ for r in range (start,end+1):
         begin=int((natoms+2)*i)+3 #skip first 2 lines of each frame
         end=int((natoms+2)*(i+1))
         os.system("sed -n "+str(begin)+","+str(end)+"p "+folder_sim+"/dump/dump.xyz >>"+folder_sim+dir_QE_files+outname)
-#        os.system("tail -n +3  "+folder_sim+"/dump/dump."+str(dump_step)+".xyz >> "+folder_sim+dir_QE_files+outname)

@@ -2,7 +2,7 @@
 # select configurations based upon the COLVAR value
 # then, prepare input folders for Quantum Espresso
 # works looping on replicas, at fixed T and chemical composition of the system
-# 05/04/2023 version
+# 10/11/2023 version
 
 import numpy as np
 from params import *
@@ -22,7 +22,6 @@ else:
     col_max=float(sys.argv[3])
     
 for r in range (start,end+1):
-    selected=[] #list of selected configs
     counter_sel=0
 
     folder_sim=main_folder+"/run_{}/".format(int(r))
@@ -37,7 +36,6 @@ for r in range (start,end+1):
     #loop over the configurations, keeping or discarding them based on their CV value
     for i,s in enumerate(CV):
         if (CV[i]>= col_min and CV[i]<=col_max): #transition region
-            selected.append(i)
             counter_sel+=1
         else:
             #remove that step
@@ -53,9 +51,7 @@ for r in range (start,end+1):
     if not os.path.exists(folder_sim+dir_QE_files):
         os.makedirs(folder_sim+dir_QE_files)
         
-    for i,config in enumerate(selected): #config is unused, so far
-
-        dump_step=int(steps[int(i)])
+    for dump_step in steps:
 
         # first part: copy and paste from template
         outname=QE_rootname+"."+str(i)+".in"
@@ -65,4 +61,3 @@ for r in range (start,end+1):
         begin=int((natoms+2)*i)+3 #skip first 2 lines of each frame
         end=int((natoms+2)*(i+1))
         os.system("sed -n "+str(begin)+","+str(end)+"p "+folder_sim+"/dump/dump.xyz >>"+folder_sim+dir_QE_files+outname)
-#        os.system("tail -n +3  "+folder_sim+"/dump/dump."+str(dump_step)+".xyz >> "+folder_sim+dir_QE_files+outname)
