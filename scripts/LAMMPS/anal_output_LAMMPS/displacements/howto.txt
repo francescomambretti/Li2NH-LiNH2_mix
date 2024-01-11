@@ -1,0 +1,7 @@
+for i in {0..3}; do bash subst_2nd_line_xyz.sh 20_NH2_pre/dump.$i.xyz ;done #insert box info in dump files
+conda activate ovito
+for i in {0..3}; do python analysis.ovito.py 20_NH2_pre/dump.$i.xyz 20_NH2_pre/dump.displ.$i.xyz ;done #compute displacements
+conda deactivate
+python displacements.py
+
+#N.B.: requires conda installation of Ovito

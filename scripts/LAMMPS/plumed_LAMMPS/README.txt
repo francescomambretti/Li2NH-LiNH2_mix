@@ -1,0 +1,1 @@
+The awk script has to be used to automatically select Li, N and H atoms indexes to form the groups within PLUMED script. The driver script is provided as an example to monitor physical quantities without biasing them.

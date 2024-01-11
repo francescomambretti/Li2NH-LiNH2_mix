@@ -1,0 +1,122 @@
+# originally written by Manyi Yang, modified by Francesco Mambretti
+# 29/05/2023 version
+# unbiased run to compute diffusion coefficients
+
+###################################################################
+variable 				p_id world ".0."  
+variable        NSTEPS_REST     equal 2000000 #write restart file every these many steps
+variable        NSTEPS1_0          equal 1000000 #equilibration-0
+variable        NSTEPS1_1       equal 3000000 #equilibration-1
+variable        NSTEPS2          equal 4000000 #production
+variable        THERMO_FREQ     equal 4000
+variable        DUMP_FREQ       equal 2000
+variable 				MOD_OUT_FREQ		equal 200
+variable				START_TEMP			equal 300 #K
+variable        TEMP            equal 350 #K 
+variable				SEED1           equal 1589
+variable				SEED2           equal 5464
+variable        dt              equal 0.00025 #ps, i.e. 1000*fs
+variable        TAU_T           equal 0.02
+
+###################################################################
+units           metal
+boundary        p p p
+restart ${NSTEPS_REST} lmp.restart
+atom_style      atomic
+neigh_modify    delay 10 every 1
+
+# TIMESTEP
+timestep	${dt}  #ps 
+
+###################################################################
+if "${rest}==0" then &
+  "read_restart lmp.restart.*" &
+else &
+  "read_data dump.1024.0NH2.2.lmp"
+
+mass	1       1.00784		
+mass	2				14.0067	
+mass  3				6.94100
+
+###################################################################
+variable	potential_path string /work/fmambretti/lithium_imide_amide/potential
+
+pair_style deepmd ${potential_path}/tr-1/frozen_model_compressed.pb ${potential_path}/tr-2/frozen_model_compressed.pb ${potential_path}/tr-3/frozen_model_compressed.pb ${potential_path}/tr-4/frozen_model_compressed.pb out_freq ${MOD_OUT_FREQ} out_file model_devi.out
+
+pair_coeff  * *
+
+###################################################################
+#groups
+group Li type 3
+group NH type 1 2
+group H type 1
+group N type 2
+
+#msd calculation
+compute msdLi Li msd com yes
+compute msdNH NH msd com yes
+compute msdN N msd com yes
+compute msdH H msd com yes
+fix 10 Li ave/time ${THERMO_FREQ} 1 ${THERMO_FREQ}  c_msdLi[*] file msd_Li_${ITER}.dat 
+fix 11 Li vector  ${THERMO_FREQ}  c_msdLi[4]
+fix 12 NH ave/time ${THERMO_FREQ} 1 ${THERMO_FREQ}  c_msdNH[*] file msd_NH_${ITER}.dat 
+fix 13 NH vector  ${THERMO_FREQ}  c_msdNH[4]
+fix 14 H ave/time ${THERMO_FREQ} 1 ${THERMO_FREQ}  c_msdH[*] file msd_H_${ITER}.dat 
+fix 15 H vector  ${THERMO_FREQ}  c_msdH[4]
+fix 16 N ave/time ${THERMO_FREQ} 1 ${THERMO_FREQ}  c_msdN[*] file msd_N_${ITER}.dat 
+fix 17 N vector  ${THERMO_FREQ}  c_msdN[4]
+variable  fitslopeLi equal slope(f_11)/6/(${THERMO_FREQ}*${dt})
+variable  fitslopeNH equal slope(f_13)/6/(${THERMO_FREQ}*${dt})
+variable  fitslopeN equal slope(f_15)/6/(${THERMO_FREQ}*${dt})
+variable  fitslopeH equal slope(f_17)/6/(${THERMO_FREQ}*${dt})
+
+###################################################################
+#thermo
+thermo          ${THERMO_FREQ}
+thermo_style    custom step temp pe ke etotal press vol lx ly lz  c_msdLi[4]  v_fitslopeLi c_msdNH[4]  v_fitslopeNH c_msdH[4]  v_fitslopeH c_msdN[4]  v_fitslopeN
+thermo_modify 	flush yes
+
+###################################################################
+###### equil - NVT
+#reset_timestep         0
+
+if "${rest}==1" then &
+  "shell mkdir dump" &
+  "dump            init_conf all xyz ${NSTEPS1_0} dump.0.xyz" &
+  "dump_modify     init_conf element H N Li sort id" &
+  "dump            dump_equi all atom ${DUMP_FREQ} dump/equi_dump.lammpstrj" &
+  "dump_modify     dump_equi append yes sort id" &
+  "velocity        all create ${TEMP} ${SEED1} dist gaussian" &
+  "fix             1 all nve" &
+  "fix             2 all temp/csvr ${START_TEMP} ${START_TEMP} ${TAU_T} ${SEED1}" &
+  "fix             3 all momentum 1 linear 1 1 1 rescale angular" &
+  "run             ${NSTEPS1_0}" &
+  "unfix 2" &
+  "fix             2 all temp/csvr ${START_TEMP} ${TEMP} ${TAU_T} ${SEED1}" &
+  "run ${NSTEPS1_1}" &
+  "unfix 1" &
+  "unfix 2" &
+  "unfix 3" &
+  "undump init_conf" &
+  "undump   dump_equi"
+
+
+###################################################################
+# DUMP
+shell mkdir 		dump
+dump						myDump all xyz ${DUMP_FREQ} dump/dump.xyz
+dump_modify			myDump append yes element H N Li
+dump            myDump3 all atom ${DUMP_FREQ} dump/dump.lammpstrj
+dump_modify     myDump3 append yes sort id
+
+###################################################################
+## Production - NVT
+if "${rest}==0" then &
+ "fix             1 all nve" &
+ "fix             2 all temp/csvr ${TEMP} ${TEMP} ${TAU_T} ${SEED2}" &
+ "fix             3 all momentum 1 linear 1 1 1 rescale angular" &
+ "run             ${NSTEPS2}" &
+ "unfix 1" &
+ "unfix 2" &
+ "unfix 3"
+# ---------- End --------------------- 
