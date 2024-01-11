@@ -20,7 +20,7 @@ scripts for the investigation of Ammonia decomposition on Lithium Imide/Amide so
 2) `dp-test` --> contains a bash script to run `dp test` on a set of subfolders
 
 -`LAMMPS`:
-1) `ìnit_configs` --> collection of initial configurations (in LAMMPS dump format) used in simulations + scripts to generate them. ASE (https://wiki.fysik.dtu.dk/ase/) is required to generate some of the initial configurations with the provided notebooks.
-2) `LAMMPS_input_scripts` --> LAMMPS input scripts for: bulk, surface, surface + ammonia; includes plumed files
-3) `run_LAMMPS` --> script to run LAMMPS on a cluster
+1) `ìnit_configs` --> collection of initial configurations (in LAMMPS dump format) used in simulations + scripts to generate them. ASE (https://wiki.fysik.dtu.dk/ase/) is required to generate some of the initial configurations with the provided notebooks. 
+2) `run_LAMMPS` --> script to run LAMMPS on a cluster + LAMMPS input scripts for: bulk, surface, surface + ammonia
+3)  `plumed_LAMMPS` --> contains plumed & plumed driver scripts to be run with LAMMPS
 4) `anal_output_LAMMPS` --> script to analyze LAMMPS outputs
