@@ -1,0 +1,1 @@
+Example configuration of a diazanediide formed, with the F-center removed by the addition of one NH molecule. 394 atoms are now in the system.

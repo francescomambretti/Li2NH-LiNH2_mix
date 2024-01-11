@@ -1,0 +1,1 @@
+These configurations have been obtained after a few ns of MD simulations with ML interatomic potential, starting from the configurations found in the '384_atoms+2NH3' folder. The two ammonia molecules on top have lost on H atom each (i.e. a proton) and they are now equilibrated in this new state. 
