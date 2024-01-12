@@ -1,4 +1,5 @@
 #this version is OK for lammps dump files
+#inside plumed.dat, substitute the explicit list of indexes with $HLIST, $NLIST, $LILIST
 myfile="$1"
 folder="$2"
 
